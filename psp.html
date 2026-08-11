@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Siswa - SMA NU Al Ma'ruf Kudus</title>
+    <!-- SheetJS CDN untuk membaca file Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0a1128 0%, #101f42 40%, #001233 100%);
+            --glossy-card: linear-gradient(145deg, rgba(30, 58, 138, 0.45) 0%, rgba(15, 23, 42, 0.75) 100%);
+            --glossy-input: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 58, 138, 0.3) 100%);
+            --btn-glossy: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 50%, #1e40af 100%);
+            --btn-glossy-hover: linear-gradient(180deg, #60a5fa 0%, #2563eb 50%, #1d4ed8 100%);
+            --neon-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+            --metal-shine: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 70%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            color: #f1f5f9;
+        }
+
+        .container {
+            position: relative;
+            background: var(--glossy-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 480px;
+            border-radius: 24px;
+            padding: 40px 30px;
+            box-shadow: var(--neon-shadow), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(147, 197, 253, 0.3);
+            overflow: hidden;
+            text-align: center;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: var(--metal-shine);
+            transform: rotate(35deg);
+            pointer-events: none;
+        }
+
+        .logo-container {
+            margin-bottom: 20px;
+        }
+
+        .logo-container img {
+            height: 110px;
+            width: auto;
+            filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8));
+            object-fit: contain;
+        }
+
+        .header h2 {
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(180deg, #ffffff 0%, #a2d2ff 60%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .status-box {
+            font-size: 13px;
+            color: #60a5fa;
+            margin-bottom: 20px;
+            font-weight: 600;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            background: var(--glossy-input);
+            border: 1px solid rgba(147, 197, 253, 0.3);
+            border-radius: 12px;
+            font-size: 16px;
+            color: #ffffff;
+            outline: none;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.7);
+        }
+
+        .form-group input:focus {
+            border-color: #60a5fa;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.7), 0 0 15px rgba(96, 165, 250, 0.6);
+        }
+
+        .btn-metallic {
+            width: 100%;
+            padding: 15px;
+            background: var(--btn-glossy);
+            border: 1px solid #93c5fd;
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(29, 78, 216, 0.6);
+            transition: all 0.25s ease;
+        }
+
+        .btn-metallic:hover {
+            background: var(--btn-glossy-hover);
+            transform: translateY(-2px);
+        }
+
+        .alert-error {
+            background: rgba(220, 38, 38, 0.3);
+            border: 1px solid #f87171;
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+            font-weight: 600;
+        }
+
+        .result-card {
+            display: none;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 18px;
+            padding: 20px;
+            text-align: left;
+        }
+
+        .result-item {
+            margin-bottom: 12px;
+        }
+
+        .result-label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .result-value {
+            font-size: 16px;
+            color: #f8fafc;
+            font-weight: 700;
+        }
+
+        .badge-kelas {
+            display: inline-block;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            border: 1px solid #60a5fa;
+            color: #ffffff;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(147, 197, 253, 0.2);
+            margin: 12px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo-container">
+        <!-- Menggunakan logo lokal logo.png dari repo, dengan fallback ke URL gambar Google Drive/Public -->
+        <img src="logo.jpg" 
+             onerror="this.onerror=null; this.src='https://lh3.googleusercontent.com/d/1_S-v8Cky4bNpxwpx96yM_k57-V2w_E-M';" 
+             alt="Logo SMA NU Al Ma'ruf Kudus">
+    </div>
+
+    <div class="header">
+        <h2>Portal Akun Siswa</h2>
+        <p>SMA NU Al Ma'ruf Kudus</p>
+    </div>
+
+    <div id="statusBox" class="status-box">⏳ Memuat database siswa...</div>
+
+    <!-- Form Login -->
+    <div id="loginForm">
+        <div id="errorMsg" class="alert-error">NISN tidak ditemukan.</div>
+        
+        <div class="form-group">
+            <label for="nisnInput">Masukkan NISN Siswa</label>
+            <input type="text" id="nisnInput" placeholder="Contoh: 0085649162" autocomplete="off">
+        </div>
+
+        <button class="btn-metallic" onclick="login()">Cek Akun Saya</button>
+    </div>
+
+    <!-- Hasil Info Akun Siswa -->
+    <div id="resultCard" class="result-card">
+        <div class="result-item">
+            <div class="result-label">Nama Lengkap Siswa</div>
+            <div class="result-value" id="resNama">-</div>
+        </div>
+        <div class="divider"></div>
+        <div class="result-item">
+            <div class="result-label">Kelas</div>
+            <div class="result-value"><span class="badge-kelas" id="resKelas">-</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="result-item">
+            <div class="result-label">Username Login PSP</div>
+            <div class="result-value" style="color: #60a5fa; font-family: monospace;" id="resUsername">-</div>
+        </div>
+        <div class="divider"></div>
+        <div class="result-item">
+            <div class="result-label">Password Login</div>
+            <div class="result-value" style="color: #93c5fd; font-family: monospace;" id="resPassword">-</div>
+        </div>
+
+        <button class="btn-metallic" style="margin-top: 20px; background: #334155;" onclick="logout()">Kembali / Cari Lain</button>
+    </div>
+</div>
+
+<script>
+    let studentData = [];
+
+    // Mengambil file pspmobile.xlsx otomatis dari repositori GitHub
+    window.addEventListener('DOMContentLoaded', () => {
+        const statusBox = document.getElementById('statusBox');
+        
+        fetch('pspmobile.xlsx')
+            .then(res => {
+                if (!res.ok) throw new Error("File pspmobile.xlsx belum ada di repositori.");
+                return res.arrayBuffer();
+            })
+            .then(ab => {
+                const workbook = XLSX.read(new Uint8Array(ab), {type: 'array'});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                studentData = jsonData.map(row => {
+                    let rawUsername = row['Username'] ? String(row['Username']).trim() : '';
+                    let nisn = rawUsername.replace('smanuamk.', '');
+                    
+                    return {
+                        nama: row['Nama'] || 'Tanpa Nama',
+                        kelas: row['Tag'] || '-',
+                        username: rawUsername,
+                        password: nisn,
+                        nisn: nisn
+                    };
+                }).filter(item => item.nisn !== '');
+
+                statusBox.innerHTML = "✅ Database Siap (" + studentData.length + " Siswa Loaded)";
+                statusBox.style.color = "#34d399";
+            })
+            .catch(err => {
+                statusBox.innerHTML = "⚠️ " + err.message;
+                statusBox.style.color = "#f87171";
+            });
+    });
+
+    function login() {
+        const inputVal = document.getElementById('nisnInput').value.trim();
+        const errorMsg = document.getElementById('errorMsg');
+        errorMsg.style.display = 'none';
+
+        if (studentData.length === 0) {
+            errorMsg.innerText = '⚠️ Database belum siap. Pastikan file pspmobile.xlsx sudah diunggah ke repositori GitHub.';
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        if (!inputVal) {
+            errorMsg.innerText = '⚠️ Masukkan NISN Anda terlebih dahulu.';
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        const student = studentData.find(s => 
+            s.nisn === inputVal || 
+            s.nisn.replace(/^0+/, '') === inputVal.replace(/^0+/, '')
+        );
+
+        if (student) {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('statusBox').style.display = 'none';
+            
+            document.getElementById('resNama').innerText = student.nama;
+            document.getElementById('resKelas').innerText = student.kelas;
+            document.getElementById('resUsername').innerText = student.username;
+            document.getElementById('resPassword').innerText = student.password;
+
+            document.getElementById('resultCard').style.display = 'block';
+        } else {
+            errorMsg.innerText = '❌ NISN tidak ditemukan. Pastikan NISN yang dimasukkan benar.';
+            errorMsg.style.display = 'block';
+        }
+    }
+
+    function logout() {
+        document.getElementById('resultCard').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('statusBox').style.display = 'block';
+        document.getElementById('nisnInput').value = '';
+    }
+</script>
+
+</body>
+</html>
