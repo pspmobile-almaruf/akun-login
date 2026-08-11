@@ -96,6 +96,7 @@
             padding: 10px;
             border-radius: 10px;
             border: 1px solid rgba(96, 165, 250, 0.2);
+            line-height: 1.5;
         }
 
         .form-group {
@@ -211,14 +212,13 @@
 
 <div class="container">
     <div class="logo-container">
-        <!-- Menggunakan logo lokal logo.png dari repo, dengan fallback ke URL gambar Google Drive/Public -->
-        <img src="logo.jpg" 
+        <img src="logo.png" 
              onerror="this.onerror=null; this.src='https://lh3.googleusercontent.com/d/1_S-v8Cky4bNpxwpx96yM_k57-V2w_E-M';" 
              alt="Logo SMA NU Al Ma'ruf Kudus">
     </div>
 
     <div class="header">
-        <h2>Akun PSP Mobile Siswa</h2>
+        <h2>Portal Akun Siswa</h2>
         <p>SMA NU Al Ma'ruf Kudus</p>
     </div>
 
@@ -230,7 +230,7 @@
         
         <div class="form-group">
             <label for="nisnInput">Masukkan NISN Siswa</label>
-            <input type="text" id="nisnInput" placeholder="Contoh: 0085649162" autocomplete="off">
+            <input type="text" id="nisnInput" placeholder="Contoh: 0109949600" autocomplete="off" maxlength="10">
         </div>
 
         <button class="btn-metallic" onclick="login()">Cek Akun Saya</button>
@@ -265,35 +265,89 @@
 <script>
     let studentData = [];
 
-    // Mengambil file pspmobile.xlsx otomatis dari repositori GitHub
     window.addEventListener('DOMContentLoaded', () => {
         const statusBox = document.getElementById('statusBox');
         
         fetch('pspmobile.xlsx')
             .then(res => {
-                if (!res.ok) throw new Error("File pspmobile.xlsx belum ada di repositori.");
+                if (!res.ok) throw new Error("File pspmobile.xlsx tidak ditemukan di repositori.");
                 return res.arrayBuffer();
             })
             .then(ab => {
-                const workbook = XLSX.read(new Uint8Array(ab), {type: 'array'});
+                // Membaca workbook excel lengkap dengan nilai formula jika ada
+                const workbook = XLSX.read(new Uint8Array(ab), {type: 'array', cellFormulas: true});
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                // Konversi sheet ke array matriks 2D
+                const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ''});
 
-                studentData = jsonData.map(row => {
-                    let rawUsername = row['Username'] ? String(row['Username']).trim() : '';
-                    let nisn = rawUsername.replace('smanuamk.', '');
+                if (!rows || rows.length < 2) {
+                    throw new Error("File Excel kosong atau format tidak sesuai.");
+                }
+
+                // Mencari baris header (Nama, NISN, Kelas, Username, Password)
+                let headerIndex = -1;
+                let colMap = { nama: -1, nisn: -1, kelas: -1, username: -1, password: -1 };
+
+                for (let i = 0; i < Math.min(10, rows.length); i++) {
+                    const rowText = rows[i].map(c => String(c).toLowerCase().trim());
                     
-                    return {
-                        nama: row['Nama'] || 'Tanpa Nama',
-                        kelas: row['Tag'] || '-',
-                        username: rawUsername,
-                        password: nisn,
-                        nisn: nisn
-                    };
-                }).filter(item => item.nisn !== '');
+                    const namaIdx = rowText.findIndex(c => c === 'nama' || c === 'nama siswa');
+                    const nisnIdx = rowText.findIndex(c => c === 'nisn');
+                    const usernameIdx = rowText.findIndex(c => c === 'username');
 
-                statusBox.innerHTML = "✅ Database Siap (" + studentData.length + " Siswa Loaded)";
-                statusBox.style.color = "#34d399";
+                    if (namaIdx !== -1 && (nisnIdx !== -1 || usernameIdx !== -1)) {
+                        headerIndex = i;
+                        colMap.nama = namaIdx;
+                        colMap.nisn = nisnIdx;
+                        colMap.kelas = rowText.findIndex(c => c === 'kelas');
+                        colMap.username = usernameIdx;
+                        colMap.password = rowText.findIndex(c => c === 'password');
+                        break;
+                    }
+                }
+
+                if (headerIndex === -1) {
+                    throw new Error("Header kolom (Nama / NISN / Username) tidak ditemukan di Excel.");
+                }
+
+                studentData = [];
+
+                for (let i = headerIndex + 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row.length === 0) continue;
+
+                    let namaVal = colMap.nama !== -1 ? String(row[colMap.nama] || '').trim() : '';
+                    let nisnVal = colMap.nisn !== -1 ? String(row[colMap.nisn] || '').trim() : '';
+                    let kelasVal = colMap.kelas !== -1 ? String(row[colMap.kelas] || '').trim() : '-';
+                    let userVal = colMap.username !== -1 ? String(row[colMap.username] || '').trim() : '-';
+                    let passVal = colMap.password !== -1 ? String(row[colMap.password] || '').trim() : '-';
+
+                    // Abaikan baris dummy header "Column1", "Column2", dst.
+                    if (namaVal.toLowerCase().includes('column') || nisnVal.toLowerCase().includes('column')) continue;
+
+                    // Hilangkan karakter non-angka pada NISN
+                    let cleanNisn = nisnVal.replace(/[^0-9]/g, '');
+
+                    if (namaVal && cleanNisn) {
+                        studentData.push({
+                            nama: namaVal,
+                            nisn: cleanNisn.padStart(10, '0'),
+                            nisnRaw: cleanNisn,
+                            kelas: kelasVal || '-',
+                            username: userVal || '-',
+                            password: passVal || '-'
+                        });
+                    }
+                }
+
+                if (studentData.length > 0) {
+                    statusBox.innerHTML = "✅ Database Siap (" + studentData.length + " Siswa Loaded)";
+                    statusBox.style.color = "#34d399";
+                } else {
+                    statusBox.innerHTML = "⚠️ Kolom NISN di Excel masih bernilai kosong/rumus belum di-Copy Paste Values.";
+                    statusBox.style.color = "#fbbf24";
+                }
             })
             .catch(err => {
                 statusBox.innerHTML = "⚠️ " + err.message;
@@ -307,7 +361,7 @@
         errorMsg.style.display = 'none';
 
         if (studentData.length === 0) {
-            errorMsg.innerText = '⚠️ Database belum siap. Pastikan file pspmobile.xlsx sudah diunggah ke repositori GitHub.';
+            errorMsg.innerText = '⚠️ Database belum terisi. Jika NISN di Excel menggunakan Rumus, silakan simpan ulang Excel dengan "Copy - Paste Special Values".';
             errorMsg.style.display = 'block';
             return;
         }
@@ -318,9 +372,13 @@
             return;
         }
 
+        const inputClean = inputVal.replace(/[^0-9]/g, '');
+
+        // Pencarian NISN yang sangat fleksibel
         const student = studentData.find(s => 
-            s.nisn === inputVal || 
-            s.nisn.replace(/^0+/, '') === inputVal.replace(/^0+/, '')
+            s.nisn === inputClean.padStart(10, '0') || 
+            s.nisnRaw === inputClean ||
+            s.nisn.replace(/^0+/, '') === inputClean.replace(/^0+/, '')
         );
 
         if (student) {
